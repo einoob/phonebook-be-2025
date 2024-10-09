@@ -4,6 +4,7 @@ const morgan = require("morgan");
 
 const app = express();
 app.use(express.json());
+app.use(express.static('dist'))
 app.use(cors());
 
 morgan.token("body", (req) => {
@@ -48,19 +49,21 @@ let persons = [
   },
 ];
 
+const baseUrl = "/api/persons/"
+
 app.get("/", (_req, res) => {
   res.send("Hello world");
 });
 
-app.get("/api/persons", (_req, res) => {
+app.get(baseUrl, (_req, res) => {
   res.send(persons);
 });
 
-app.get("/api/persons/:id", (req, res) => {
+app.get(`${baseUrl}:id`, (req, res) => {
   res.send(persons.find(({ id }) => id === req.params.id));
 });
 
-app.post("/api/persons", (req, res) => {
+app.post(baseUrl, (req, res) => {
   let person = req.body;
 
   if (!person.name || !person.number) {
@@ -77,7 +80,7 @@ app.post("/api/persons", (req, res) => {
   res.json(person);
 });
 
-app.delete("/api/persons/:id", (req, res) => {
+app.delete(`${baseUrl}:id`, (req, res) => {
   const id = req.params.id;
   persons = persons.filter((person) => person.id !== id);
 
