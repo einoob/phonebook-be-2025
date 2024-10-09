@@ -1,23 +1,29 @@
 const express = require("express");
+const cors = require("cors");
 const morgan = require("morgan");
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
-morgan.token('body', (req) => {
-  return JSON.stringify(req.body); // Return request body as a string
+morgan.token("body", (req) => {
+  return JSON.stringify(req.body);
 });
 
-app.use(morgan(function (tokens, req, res) {
-  return [
-    tokens.method(req, res),
-    tokens.url(req, res),
-    tokens.status(req, res),
-    tokens.res(req, res, 'content-length'), '-',
-    tokens['response-time'](req, res), 'ms',
-    tokens.body(req, res)
-  ].join(' ')
-}));
+app.use(
+  morgan(function (tokens, req, res) {
+    return [
+      tokens.method(req, res),
+      tokens.url(req, res),
+      tokens.status(req, res),
+      tokens.res(req, res, "content-length"),
+      "-",
+      tokens["response-time"](req, res),
+      "ms",
+      tokens.body(req, res),
+    ].join(" ");
+  })
+);
 
 let persons = [
   {
@@ -84,7 +90,7 @@ app.get("/info", (_req, res) => {
   res.send(infoText);
 });
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
   console.log(`Server running on ${PORT}`);
 });
