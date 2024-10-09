@@ -1,8 +1,25 @@
 const express = require("express");
+const morgan = require("morgan");
 
 const app = express();
+app.use(express.json());
 
-const persons = [
+morgan.token('body', (req) => {
+  return JSON.stringify(req.body); // Return request body as a string
+});
+
+app.use(morgan(function (tokens, req, res) {
+  return [
+    tokens.method(req, res),
+    tokens.url(req, res),
+    tokens.status(req, res),
+    tokens.res(req, res, 'content-length'), '-',
+    tokens['response-time'](req, res), 'ms',
+    tokens.body(req, res)
+  ].join(' ')
+}));
+
+let persons = [
   {
     name: "Arto Hellas",
     number: "040-123456",
@@ -37,11 +54,29 @@ app.get("/api/persons/:id", (req, res) => {
   res.send(persons.find(({ id }) => id === req.params.id));
 });
 
-// app.delete("/api/persons/:id", (req, res) => {
-//   persons = persons.filter(({ id }) => id !== req.params.id);
+app.post("/api/persons", (req, res) => {
+  let person = req.body;
 
-//   res.status(204).end()
-// });
+  if (!person.name || !person.number) {
+    return res.status(400).json({
+      error: "Name or number missing",
+    });
+  } else if (persons.find(({ name }) => name.toLowerCase() === person.name.toLowerCase())) {
+    return res.status(400).json({
+      error: "Name must be unique",
+    });
+  }
+
+  person.id = Math.floor(Math.random() * 10000);
+  res.json(person);
+});
+
+app.delete("/api/persons/:id", (req, res) => {
+  const id = req.params.id;
+  persons = persons.filter((person) => person.id !== id);
+
+  res.status(204).end();
+});
 
 app.get("/info", (_req, res) => {
   const date = new Date();
