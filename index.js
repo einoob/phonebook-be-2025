@@ -1,10 +1,13 @@
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
+const mongoose = require("mongoose");
+
+const Person = require("./src/models/person");
 
 const app = express();
 app.use(express.json());
-app.use(express.static('dist'))
+app.use(express.static("dist"));
 app.use(cors());
 
 morgan.token("body", (req) => {
@@ -26,58 +29,49 @@ app.use(
   })
 );
 
-let persons = [
-  {
-    name: "Arto Hellas",
-    number: "040-123456",
-    id: "1",
-  },
-  {
-    name: "Ada Lovelace",
-    number: "39-44-5323523",
-    id: "2",
-  },
-  {
-    name: "Dan Abramov",
-    number: "12-43-234345",
-    id: "3",
-  },
-  {
-    name: "Mary Poppendieck",
-    number: "39-23-6423122",
-    id: "4",
-  },
-];
-
-const baseUrl = "/api/persons/"
+const baseUrl = "/api/persons/";
 
 app.get("/", (_req, res) => {
   res.send("Hello world");
 });
 
-app.get(baseUrl, (_req, res) => {
-  res.send(persons);
+app.get(baseUrl, async (_req, res) => {
+  const persons = await Person.find({});
+  res.json(persons);
 });
 
-app.get(`${baseUrl}:id`, (req, res) => {
-  res.send(persons.find(({ id }) => id === req.params.id));
+app.get(`${baseUrl}:id`, async (req, res) => {
+  const { id } = req.params;
+  console.log("here 1");
+
+  try {
+    console.log("here");
+    const person = await Person.findById(req.params.id);
+    res.json(person);
+  } catch (error) {
+    res.status(404).json({ error: `Can't find person with id ${id}` });
+  }
 });
 
-app.post(baseUrl, (req, res) => {
-  let person = req.body;
+app.post(baseUrl, async (req, res) => {
+  const { name, phonenumber } = req.body;
+  console.log(name, phonenumber);
 
-  if (!person.name || !person.number) {
-    return res.status(400).json({
-      error: "Name or number missing",
-    });
-  } else if (persons.find(({ name }) => name.toLowerCase() === person.name.toLowerCase())) {
-    return res.status(400).json({
-      error: "Name must be unique",
-    });
+  if (!name || !phonenumber) {
+    return res.status(400).json({ error: "Name or phonenumber missing" });
   }
 
-  person.id = Math.floor(Math.random() * 10000);
-  res.json(person);
+  const person = new Person({
+    name,
+    phonenumber,
+  });
+
+  try {
+    const savedPerson = await person.save();
+    res.json(savedPerson);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to save person" });
+  }
 });
 
 app.delete(`${baseUrl}:id`, (req, res) => {
@@ -87,13 +81,14 @@ app.delete(`${baseUrl}:id`, (req, res) => {
   res.status(204).end();
 });
 
-app.get("/info", (_req, res) => {
+app.get("/info", async (_req, res) => {
   const date = new Date();
-  const infoText = `Phonebook has info for ${persons.length} people <br><br> ${date}`;
+  const amountOfPersons = await Person.find({}).length;
+  const infoText = `Phonebook has info for ${amountOfPersons} people <br><br> ${date}`;
   res.send(infoText);
 });
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT || 3003;
 app.listen(PORT, () => {
   console.log(`Server running on ${PORT}`);
 });
