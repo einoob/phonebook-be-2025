@@ -40,20 +40,23 @@ app.get(baseUrl, async (_req, res) => {
   res.json(persons);
 });
 
-app.get(`${baseUrl}:id`, async (req, res) => {
+app.get(`${baseUrl}:id`, async (req, res, next) => {
   const { id } = req.params;
-  console.log("here 1");
 
   try {
-    console.log("here");
     const person = await Person.findById(req.params.id);
-    res.json(person);
+    if (!person) {
+      res.status(404).json(`Can't find person with id ${id}`).end();
+    } else {
+      res.json(person);
+    }
   } catch (error) {
-    res.status(404).json({ error: `Can't find person with id ${id}` });
+    console.log(error);
+    next(error);
   }
 });
 
-app.post(baseUrl, async (req, res) => {
+app.post(baseUrl, async (req, res, next) => {
   const { name, phonenumber } = req.body;
   console.log(name, phonenumber);
 
@@ -70,20 +73,42 @@ app.post(baseUrl, async (req, res) => {
     const savedPerson = await person.save();
     res.json(savedPerson);
   } catch (error) {
-    res.status(500).json({ error: "Failed to save person" });
+    next(error);
   }
 });
 
-app.delete(`${baseUrl}:id`, (req, res) => {
-  const id = req.params.id;
-  persons = persons.filter((person) => person.id !== id);
+app.delete(`${baseUrl}:id`, async (req, res, next) => {
+  const { id } = req.params;
+  try {
+    await Person.findByIdAndDelete(id);
+    res.status(204).end();
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+});
 
-  res.status(204).end();
+app.put(`${baseUrl}:id`, async (req, res, next) => {
+  const { name, phonenumber } = req.body;
+  const { id } = req.params;
+
+  const person = {
+    name,
+    phonenumber,
+  };
+
+  try {
+    const updatedPerson = await Person.findByIdAndUpdate(id, person, { new: true });
+    res.json(updatedPerson);
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.get("/info", async (_req, res) => {
   const date = new Date();
-  const amountOfPersons = await Person.find({}).length;
+  const persons = await Person.find({});
+  const amountOfPersons = persons.length;
   const infoText = `Phonebook has info for ${amountOfPersons} people <br><br> ${date}`;
   res.send(infoText);
 });
@@ -92,3 +117,15 @@ const PORT = process.env.PORT || 3003;
 app.listen(PORT, () => {
   console.log(`Server running on ${PORT}`);
 });
+
+const errorHandler = (error, _request, response, next) => {
+  console.error(error.message);
+  const { value } = error;
+  if (error.name === "CastError") {
+    return response.status(400).send({ error: `Malformatted id ${value}` });
+  }
+
+  next(error);
+};
+
+app.use(errorHandler);
