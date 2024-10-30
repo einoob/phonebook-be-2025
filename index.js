@@ -51,14 +51,12 @@ app.get(`${baseUrl}:id`, async (req, res, next) => {
       res.json(person);
     }
   } catch (error) {
-    console.log(error);
     next(error);
   }
 });
 
 app.post(baseUrl, async (req, res, next) => {
   const { name, phonenumber } = req.body;
-  console.log(name, phonenumber);
 
   if (!name || !phonenumber) {
     return res.status(400).json({ error: "Name or phonenumber missing" });
@@ -83,7 +81,6 @@ app.delete(`${baseUrl}:id`, async (req, res, next) => {
     await Person.findByIdAndDelete(id);
     res.status(204).end();
   } catch (error) {
-    console.log(error);
     next(error);
   }
 });
@@ -123,6 +120,8 @@ const errorHandler = (error, _request, response, next) => {
   const { value } = error;
   if (error.name === "CastError") {
     return response.status(400).send({ error: `Malformatted id ${value}` });
+  } else if (error.name === "ValidationError") {
+    return response.status(400).send({ error: error.message });
   }
 
   next(error);
